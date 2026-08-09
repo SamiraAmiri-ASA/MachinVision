@@ -11,12 +11,12 @@ Approach:
 from __future__ import annotations
 
 import logging
-import numpy as np
-import cv2
-from typing import Optional
 
-from .models import DiscGeometry, SurfaceQCResult, DefectResult, Status
-from .utils import to_gray, normalize_illumination
+import cv2
+import numpy as np
+
+from .models import DefectResult, DiscGeometry, Status, SurfaceQCResult
+from .utils import normalize_illumination, to_gray
 
 logger = logging.getLogger(__name__)
 
@@ -89,7 +89,7 @@ def detect_surface_defects(
     config: dict,
     geo: DiscGeometry,
     calibration_valid: bool,
-    reference: Optional[np.ndarray] = None,
+    reference: np.ndarray | None = None,
     inner_margin: float = 1.25,
     outer_margin: float = 0.95,
 ) -> tuple[SurfaceQCResult, np.ndarray]:
@@ -97,6 +97,9 @@ def detect_surface_defects(
     gray = to_gray(img)
     cfg = config["surface_qc"]
     ppm = geo.pixels_per_mm
+    if calibration_valid and (ppm is None or ppm <= 0):
+        raise ValueError("A positive pixels_per_mm value is required for calibrated surface QC")
+    scale = ppm if ppm is not None and ppm > 0 else 1.0
 
     mask = _build_ring_mask(gray.shape, geo, inner_margin, outer_margin)
     roi = cv2.bitwise_and(gray, gray, mask=mask)
@@ -111,10 +114,12 @@ def detect_surface_defects(
     defect_mask = cv2.morphologyEx(defect_mask, cv2.MORPH_OPEN, kernel, iterations=1)
     defect_mask = cv2.morphologyEx(defect_mask, cv2.MORPH_CLOSE, kernel, iterations=1)
 
-    n_labels, labels, stats, centroids = cv2.connectedComponentsWithStats(defect_mask, 8)
+    n_labels, _labels, stats, centroids = cv2.connectedComponentsWithStats(
+        defect_mask, connectivity=8
+    )
 
-    px2_per_mm2 = (ppm ** 2) if calibration_valid else float("nan")
-    min_area_px = cfg["min_defect_area_mm2"] * (ppm ** 2) if calibration_valid else 15.0
+    px2_per_mm2 = scale**2 if calibration_valid else float("nan")
+    min_area_px = cfg["min_defect_area_mm2"] * scale**2 if calibration_valid else 15.0
 
     defects: list[DefectResult] = []
     total_area_mm2 = 0.0
@@ -152,7 +157,7 @@ def detect_surface_defects(
     if not calibration_valid:
         status = Status.UNCERTAIN
     else:
-        max_single = max((d.area_mm2 for d in defects), default=0.0)
+        max_single = max((d.area_mm2 or 0.0 for d in defects), default=0.0)
         if (len(defects) > cfg["max_defect_count"]
                 or total_area_mm2 > cfg["max_total_defect_area_mm2"]
                 or max_single > cfg["max_single_defect_area_mm2"]):

@@ -1,7 +1,9 @@
 from __future__ import annotations
+
 from dataclasses import asdict, dataclass, field
 from enum import Enum
 from typing import Any
+
 
 class Status(str, Enum):
     PASS = "PASS"
@@ -22,7 +24,7 @@ class InspectionResult(str, Enum):
 @dataclass
 class DiscGeometry:
     outer_circle: tuple[float, float, float]
-    inner_circle: tuple[float, float, float]
+    center_hole: tuple[float, float, float]
     mounting_holes: list[tuple[float, float, float]] = field(default_factory=list)
     pixels_per_mm: float | None = None
     rotation_deg: float | None = None
@@ -33,25 +35,25 @@ class DiscGeometry:
 @dataclass
 class MeasurementResult:
     name: str
-    nominal: float
-    actual: float
+    nominal_value: float
+    measured_value: float
     tolerance: float
     deviation: float
     status: Status
+    confidence: float = 1.0
     unit: str = "mm"
     details: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class HoleResult:
-    index: int
-    center: tuple[float, float]
+    hole_id: str
+    center_px: tuple[float, float]
+    center_mm: tuple[float, float]
+    diameter_px: float
     diameter_mm: float
-    nominal_diameter_mm: float | None = None
-    diameter_deviation_mm: float | None = None
-    radial_distance_mm: float | None = None
-    nominal_radius_mm: float | None = None
-    radial_deviation_mm: float | None = None
+    circularity: float
+    confidence: float
     status: Status = Status.PASS
     details: dict[str, Any] = field(default_factory=dict)
 
@@ -59,22 +61,26 @@ class HoleResult:
 @dataclass
 class DimensionalQCResult:
     status: Status
-    measurements: dict[str, Any] = field(default_factory=dict)
-    deviations: dict[str, Any] = field(default_factory=dict)
-    holes: list[HoleResult] = field(default_factory=list)
-    failed_checks: list[str] = field(default_factory=list)
+    center_hole: HoleResult | None = None
+    mounting_holes: list[HoleResult] = field(default_factory=list)
+    radial_measurements: list[MeasurementResult] = field(default_factory=list)
+    cross_measurements: list[MeasurementResult] = field(default_factory=list)
+    angular_spacing: list[MeasurementResult] = field(default_factory=list)
+    concentricity: MeasurementResult | None = None
+    measurements: list[MeasurementResult] = field(default_factory=list)
     details: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class DefectResult:
+    defect_id: int = 0
     defect_type: str = "unknown"
     area_px: float = 0.0
     area_mm2: float | None = None
-    centroid: tuple[float, float] | None = None
-    bounding_box: tuple[int, int, int, int] | None = None
+    centroid_px: tuple[float, float] | None = None
+    bbox: tuple[int, int, int, int] = (0, 0, 0, 0)
     severity: str = "unknown"
-    score: float = 0.0
+    confidence: float = 0.0
     details: dict[str, Any] = field(default_factory=dict)
 
 
@@ -83,6 +89,9 @@ class SurfaceQCResult:
     status: Status
     defects: list[DefectResult] = field(default_factory=list)
     defect_count: int = 0
+    total_defect_area_mm2: float = 0.0
+    inspection_region_area_mm2: float = 0.0
+    defect_density: float = 0.0
     mask_path: str = ""
     details: dict[str, Any] = field(default_factory=dict)
 

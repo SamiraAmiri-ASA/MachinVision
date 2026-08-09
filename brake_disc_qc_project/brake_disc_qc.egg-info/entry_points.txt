@@ -1,2 +1,2 @@
 [console_scripts]
-brake-disc-qc = brake_disc_qc.cli:main
+brake-disc-qc = cli.inspect:main

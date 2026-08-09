@@ -1,0 +1,32 @@
+part_number: GENERIC_4H
+description: Generic four-hole brake disc
+allow_feature_scale: true
+
+quality_thresholds:
+  min_image_sharpness: 20.0
+  min_disc_area_fraction: 0.10
+  min_brightness: 10.0
+  max_brightness: 250.0
+  min_contrast: 5.0
+
+nominal_dimensions:
+  outer_diameter: 120.0
+  center_hole_diameter: 75.0
+  mounting_hole_count: 4
+  mounting_hole_diameter: 10.0
+  mounting_hole_radial_distance: 46.5
+  opposing_hole_cross_distance: 93.0
+
+tolerances:
+  center_hole_diameter: 0.5
+  mounting_hole_diameter: 0.5
+  mounting_hole_radial_distance: 0.5
+  opposing_hole_cross_distance: 0.75
+  angular_spacing_deg: 1.0
+  concentricity_mm: 0.25
+
+surface_qc:
+  min_defect_area_mm2: 1.0
+  max_defect_count: 3
+  max_total_defect_area_mm2: 10.0
+  max_single_defect_area_mm2: 5.0

@@ -1,10 +1,10 @@
 """Renders the annotated inspection image and QC summary panel."""
 from __future__ import annotations
 
-import numpy as np
 import cv2
+import numpy as np
 
-from .models import DiscGeometry, DimensionalQCResult, SurfaceQCResult, Status, InspectionReport
+from .models import DimensionalQCResult, DiscGeometry, InspectionReport, Status, SurfaceQCResult
 
 # BGR colors
 BLUE = (255, 0, 0)
@@ -92,7 +92,6 @@ def annotate(
 
 def _draw_summary_panel(out, dim, surf, report: InspectionReport):
     """QC summary + metadata panel in the top-left corner."""
-    h, w = out.shape[:2]
     panel_w, panel_h = 300, 210
     cv2.rectangle(out, (0, 0), (panel_w, panel_h), BLACK, -1)
     cv2.rectangle(out, (0, 0), (panel_w, panel_h), WHITE, 1)
@@ -120,7 +119,7 @@ def _draw_summary_panel(out, dim, surf, report: InspectionReport):
     meta = [
         f"PN: {report.part_number}",
         f"ID: {report.inspection_id[:8]}",
-        f"Calib: {'VALID' if report.calibration.valid else 'INVALID'}",
+        f"Calib: {'VALID' if report.calibration.get('pixels_per_mm') else 'INVALID'}",
         report.timestamp[:19],
     ]
     for i, line in enumerate(meta):

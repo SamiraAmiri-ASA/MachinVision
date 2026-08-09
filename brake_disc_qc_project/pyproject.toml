@@ -26,7 +26,7 @@ dev = [
 ]
 
 [project.scripts]
-brake-disc-qc = "brake_disc_qc.cli:main"
+brake-disc-qc = "cli.inspect:main"
 
 [tool.setuptools.packages.find]
 include = ["brake_disc_qc*", "cli*"]

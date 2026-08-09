@@ -20,6 +20,8 @@ class CameraCalibration:
         return cv2.undistort(image, self.camera_matrix, self.dist_coeffs)
 
     def set_scale(self, measured_pixels: float, actual_mm: float, source: str = "manual") -> None:
+        if measured_pixels <= 0:
+            raise ValueError("measured_pixels must be greater than zero")
         if actual_mm <= 0:
             raise ValueError("actual_mm must be greater than zero")
 

@@ -13,12 +13,12 @@ No physical (mm) value is emitted here; scaling happens in measurement.py.
 from __future__ import annotations
 
 import logging
-import numpy as np
+
 import cv2
-from typing import Optional
+import numpy as np
 
 from .models import DiscGeometry
-from .utils import to_gray, normalize_illumination, circle_circularity, angle_between_points
+from .utils import angle_between_points, circle_circularity, to_gray
 
 logger = logging.getLogger(__name__)
 
@@ -27,7 +27,7 @@ class FeatureDetectionError(Exception):
     """Raised when required geometric features cannot be located."""
 
 
-def _fit_outer_boundary(gray: np.ndarray) -> tuple[tuple[float, float, float], Optional[np.ndarray]]:
+def _fit_outer_boundary(gray: np.ndarray) -> tuple[tuple[float, float, float], np.ndarray | None]:
     """Segment the disc and fit its outer boundary.
 
     Returns (cx, cy, radius) and the fitted ellipse (or None). The disc is the
@@ -35,12 +35,13 @@ def _fit_outer_boundary(gray: np.ndarray) -> tuple[tuple[float, float, float], O
     closes internal holes so the disc is a solid mask.
     """
     blurred = cv2.GaussianBlur(gray, (7, 7), 0)
-    _, mask = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU)
-
-    # The disc may be darker or brighter than background; pick the mask whose
-    # foreground is a compact central blob rather than the border.
-    if mask[0, 0] == 255:  # corner is foreground -> background got labeled, invert
-        mask = cv2.bitwise_not(mask)
+    border = np.concatenate((blurred[0], blurred[-1], blurred[:, 0], blurred[:, -1]))
+    background_level = float(np.median(border))
+    difference = cv2.absdiff(blurred, np.full_like(blurred, round(background_level)))
+    # Use border noise as the foreground gate. Otsu can choose the gap between
+    # the disc and its dark holes, returning only the center hole as foreground.
+    foreground_gate = max(5.0, 3.0 * float(np.std(border)))
+    mask = np.where(difference > foreground_gate, 255, 0).astype(np.uint8)
 
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (15, 15))
     mask = cv2.morphologyEx(mask, cv2.MORPH_CLOSE, kernel, iterations=2)
@@ -68,10 +69,17 @@ def _detect_dark_blobs(
 
     Returns a list of candidate dicts with center, radius, circularity, area.
     """
-    norm = normalize_illumination(gray)
-    # Holes are dark relative to the polished/cast surface -> inverse threshold.
-    _, dark = cv2.threshold(norm, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
-    dark = cv2.bitwise_and(dark, dark, mask=disc_mask)
+    # Compute Otsu's threshold from disc pixels only. Including the brighter
+    # background (or applying CLAHE across the disc edge) can merge the whole
+    # disc body into one dark blob and hide every actual hole.
+    disc_pixels = gray[disc_mask > 0]
+    if disc_pixels.size == 0:
+        return []
+    threshold, _ = cv2.threshold(
+        disc_pixels.reshape(-1, 1), 0, 255, cv2.THRESH_BINARY + cv2.THRESH_OTSU
+    )
+    dark = np.where(gray <= threshold, 255, 0).astype(np.uint8)
+    dark = cv2.bitwise_and(dark, disc_mask)
 
     kernel = cv2.getStructuringElement(cv2.MORPH_ELLIPSE, (5, 5))
     dark = cv2.morphologyEx(dark, cv2.MORPH_OPEN, kernel, iterations=1)
@@ -211,10 +219,8 @@ def find_disc_features(
 
     geo = DiscGeometry(
         outer_circle=(ocx, ocy, oradius),
-        inner_circle=None,
-        inner_circle=(center_hole["center"][0], center_hole["center"][1], center_hole["radius"]),
+        center_hole=(center_hole["center"][0], center_hole["center"][1], center_hole["radius"]),
         mounting_holes=[(m["center"][0], m["center"][1], m["radius"]) for m in mounting],
-        disc_center_px=center_hole["center"],  # measurements reference the center hole
         pixels_per_mm=pixels_per_mm,
     )
 

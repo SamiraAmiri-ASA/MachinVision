@@ -1,0 +1,10 @@
+services:
+  inspector:
+    build:
+      context: .
+    image: brake-disc-qc:latest
+    volumes:
+      - ./data:/data:ro
+      - ./output:/output
+    command:
+      - --help

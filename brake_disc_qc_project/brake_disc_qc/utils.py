@@ -57,7 +57,7 @@ def angle_between_points(
 ) -> float:
     cx, cy = center
     px, py = point
-    angle = np.degrees(np.arctan2(py - cy, px - cx))
+    angle = np.degrees(np.arctan2(py - cy, px - cx)) % 360
     return float(angle)
 
 class ImageQualityResult(dict):

@@ -2,10 +2,15 @@
 from __future__ import annotations
 
 import logging
+
 import numpy as np
 
 from .models import (
-    DiscGeometry, DimensionalQCResult, HoleResult, MeasurementResult, Status,
+    DimensionalQCResult,
+    DiscGeometry,
+    HoleResult,
+    MeasurementResult,
+    Status,
 )
 
 logger = logging.getLogger(__name__)
@@ -38,9 +43,12 @@ def evaluate_dimensions(geo: DiscGeometry, config: dict, calibration_valid: bool
     nom = config["nominal_dimensions"]
     tol = config["tolerances"]
     ppm = geo.pixels_per_mm
+    if calibration_valid and (ppm is None or ppm <= 0):
+        raise ValueError("A positive pixels_per_mm value is required for calibrated measurements")
+    scale = ppm if ppm is not None and ppm > 0 else 1.0
 
     def to_mm(px: float) -> float:
-        return px / ppm if calibration_valid else float("nan")
+        return px / scale if calibration_valid else float("nan")
 
     ch_x, ch_y, ch_r = geo.center_hole
     ch_meta = getattr(geo, "_center_meta", {"circularity": 0.0, "fill": 0.0})
@@ -92,7 +100,9 @@ def evaluate_dimensions(geo: DiscGeometry, config: dict, calibration_valid: bool
         mounting_results.append(HoleResult(
             hole_id=f"H{idx}",
             center_px=(mx, my),
-            center_mm=((mx - ch_x) / ppm, (my - ch_y) / ppm) if calibration_valid else (float("nan"), float("nan")),
+            center_mm=((mx - ch_x) / scale, (my - ch_y) / scale)
+            if calibration_valid
+            else (float("nan"), float("nan")),
             diameter_px=2 * mr,
             diameter_mm=to_mm(2 * mr),
             circularity=meta["circularity"],
