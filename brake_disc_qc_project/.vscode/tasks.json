@@ -1,0 +1,24 @@
+{
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "Lint (ruff)",
+            "type": "shell",
+            "command": "${workspaceFolder}/.venv/bin/ruff check .",
+            "problemMatcher": []
+        },
+        {
+            "label": "Type check (mypy)",
+            "type": "shell",
+            "command": "${workspaceFolder}/.venv/bin/mypy brake_disc_qc",
+            "problemMatcher": []
+        },
+        {
+            "label": "Tests + coverage",
+            "type": "shell",
+            "command": "${workspaceFolder}/.venv/bin/pytest --cov=brake_disc_qc --cov-report=term-missing",
+            "group": "test",
+            "problemMatcher": []
+        }
+    ]
+}

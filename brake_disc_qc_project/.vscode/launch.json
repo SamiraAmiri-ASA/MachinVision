@@ -1,0 +1,45 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Inspect: sample disc",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "cli.inspect",
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "--image",
+                "data/samples/disc_001.jpg",
+                "--config",
+                "config/default.yaml",
+                "--debug"
+            ],
+            "env": {
+                "PYTHONUNBUFFERED": "1"
+            }
+        },
+        {
+            "name": "Inspect: prompt for image",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "cli.inspect",
+            "cwd": "${workspaceFolder}",
+            "console": "integratedTerminal",
+            "justMyCode": false,
+            "args": [
+                "--image",
+                "${input:imagePath}"
+            ]
+        }
+    ],
+    "inputs": [
+        {
+            "id": "imagePath",
+            "type": "promptString",
+            "description": "Path to the brake disc image",
+            "default": "data/samples/disc_001.jpg"
+        }
+    ]
+}
