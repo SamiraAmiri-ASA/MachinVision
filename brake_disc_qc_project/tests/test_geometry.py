@@ -71,3 +71,30 @@ def test_no_features_raises():
     blank = np.full((500, 500, 3), 128, dtype=np.uint8)
     with pytest.raises(FeatureDetectionError):
         find_disc_features(blank, CONFIG, 8.0)
+
+
+def test_rejects_small_defect_dots_as_mounting_holes():
+    """Shallow, low-contrast specks (casting marks/pitting) must not be
+    picked over the real bolt-circle holes, even when they are numerous and
+    individually pass the circularity/fill shape gates."""
+    img, ppm = _render_disc()
+    c = img.shape[0] // 2
+
+    # Faint defect dots: real holes/background are near-black (20) on a
+    # bright disc (150-200); these are only a shallow dip below the disc
+    # body, so their contrast against their surroundings is much lower.
+    rng = np.random.RandomState(0)
+    for _ in range(10):
+        angle = rng.uniform(0, 2 * np.pi)
+        radius_px = rng.uniform(20 * ppm, 40 * ppm)  # off the true 46.5mm bolt circle
+        dx = int(c + radius_px * np.cos(angle))
+        dy = int(c + radius_px * np.sin(angle))
+        cv2.circle(img, (dx, dy), int(rng.uniform(2, 4) * ppm / 2), (130, 130, 130), -1)
+
+    geo = find_disc_features(img, CONFIG, ppm)
+    assert len(geo.mounting_holes) == 4
+    ch = geo.center_hole
+    for mx, my, _ in geo.mounting_holes:
+        radial = np.hypot(mx - ch[0], my - ch[1])
+        # Real holes sit at 46.5mm; defect dots were seeded well inside that.
+        assert abs(radial / ppm - 46.5) < 5.0

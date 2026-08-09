@@ -61,13 +61,18 @@ class BrakeDiscInspector:
             base.warnings.append(quality["rejection_reason"] or "Image rejected.")
             return base
 
+        expected_holes = int(self.config["nominal_dimensions"]["mounting_hole_count"])
+        base.metadata["expected_hole_count"] = expected_holes
+
         # Feature detection.
         try:
             geo = find_disc_features(img, self.config, self.calibration.pixels_per_mm or 1.0)
         except FeatureDetectionError as e:
             base.overall_result = InspectionResult.UNCERTAIN
-            base.warnings.append(f"Feature detection failed: {e}")
+            base.warnings.append(f"UNCERTAIN (geometry detection failure): {e}")
             return base
+
+        base.metadata["selected_hole_count"] = len(geo.mounting_holes)
 
         # Feature-based scale calibration (only if explicitly permitted).
         calibration_valid = self.calibration.pixels_per_mm is not None
@@ -78,17 +83,27 @@ class BrakeDiscInspector:
             geo.pixels_per_mm = self.calibration.pixels_per_mm
             calibration_valid = True
             base.warnings.append("Scale derived from nominal center-hole diameter (documented fallback).")
+        elif not calibration_valid:
+            base.warnings.append(
+                "UNCERTAIN (missing scale/calibration): no --pixels-per-mm supplied and "
+                "allow_feature_scale is disabled for this model."
+            )
 
         base.calibration = self.calibration.get_status()
+        base.metadata["pixels_per_mm"] = self.calibration.pixels_per_mm
 
         # Dimensional QC.
         dim = evaluate_dimensions(geo, self.config, calibration_valid)
+        if calibration_valid and dim.status == Status.FAIL:
+            base.warnings.append("FAIL (measurement tolerance failure): see dimensional_qc.measurements.")
 
         # Surface QC.
         reference = load_image(reference_path) if reference_path else None
         surf, defect_mask = detect_surface_defects(
             img, self.config, geo, calibration_valid, reference=reference
         )
+        if calibration_valid and surf.status == Status.FAIL:
+            base.warnings.append("FAIL (surface detection failure): see surface_qc.defects.")
 
         base.dimensional_qc = dim
         base.surface_qc = surf

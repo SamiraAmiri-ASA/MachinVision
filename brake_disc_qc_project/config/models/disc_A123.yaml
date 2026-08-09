@@ -1,6 +1,6 @@
 part_number: disc_A123
 description: Brake disc model A123
-allow_feature_scale: false
+allow_feature_scale: true
 
 quality_thresholds:
   min_image_sharpness: 50.0
@@ -10,12 +10,12 @@ quality_thresholds:
   min_contrast: 10.0
 
 nominal_dimensions:
-  outer_diameter: 280.0
-  center_hole_diameter: 72.0
-  mounting_hole_count: 5
-  mounting_hole_diameter: 14.0
-  mounting_hole_radial_distance: 60.0
-  opposing_hole_cross_distance: 120.0
+  outer_diameter: 270.0
+  center_hole_diameter: 75.0
+  mounting_hole_count: 4
+  mounting_hole_diameter: 10.0
+  mounting_hole_radial_distance: 46.5
+  opposing_hole_cross_distance: 93.0
 
 tolerances:
   center_hole_diameter: 0.2
